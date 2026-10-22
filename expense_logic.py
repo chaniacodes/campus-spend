@@ -48,3 +48,24 @@ def calculate_category_totals(expenses, month):
 def get_current_month():
     """Return the current month in YYYY-MM format."""
     return date.today().strftime("%Y-%m")
+
+
+def filter_expenses(expenses, category=None, start_date=None, end_date=None):
+    """Filter expenses by category and an inclusive date range."""
+    filtered = []
+
+    for expense in expenses:
+        if category and expense["category"].lower() != category.lower():
+            continue
+
+        expense_date = expense.get("date")
+
+        if start_date and (not expense_date or expense_date < start_date):
+            continue
+
+        if end_date and (not expense_date or expense_date > end_date):
+            continue
+
+        filtered.append(expense)
+
+    return filtered

@@ -473,5 +473,70 @@ Our test, `test_legacy_expense_receives_persistent_id`, checks that:
 | Migration flag | Tracks whether saved data has been changed |
 | Regression testing | Checking that existing functionality still works after changes |
 
+## Filtering Data in Python
+
+### 1. What is filtering?
+
+Filtering means selecting only the items that satisfy a particular condition from a collection.
+
+For example, from a list of expenses, we can select only Food expenses or transactions within a particular date range.
+
+### 2. Optional parameters
+
+```python
+def filter_expenses(expenses, category=None):
+```
+
+`category=None` makes the category filter optional. If no category is provided, the function can return expenses from all categories.
+
+### 3. The `continue` statement
+
+```python
+if category and expense["category"].lower() != category.lower():
+    continue
+```
+
+`continue` skips the current loop iteration and moves to the next item.
+
+Here, expenses whose categories don't match are skipped.
+
+Using `.lower()` makes the comparison case-insensitive, so `"Food"` and `"food"` match.
+
+### 4. Date filtering
+
+Our expenses use the `YYYY-MM-DD` date format.
+
+```python
+if start_date and expense_date < start_date:
+    continue
+```
+
+This skips expenses that occurred before the selected start date.
+
+Similarly, comparing against `end_date` excludes expenses after the selected end date. Both boundaries are inclusive.
+
+ISO-formatted dates can be compared as strings chronologically, provided they are valid and consistently formatted.
+
+### 5. Input validation
+
+```python
+datetime.strptime(date_value, "%Y-%m-%d")
+```
+
+This checks whether a date matches the expected format and represents a valid calendar date. Invalid values raise `ValueError`, which we handle to prevent the application from crashing.
+
+We also check that the start date isn't later than the end date.
+
+### 6. Combining filters
+
+Users can apply multiple filters together. For example, category `Food` and October's date range return only Food expenses recorded during October.
+
+### 7. Separation of concerns
+
+- `expense_logic.py` contains the filtering logic.
+- `main.py` handles user input and displays the results.
+- `tests/` checks that the functionality behaves correctly.
+
+Keeping these responsibilities separate makes the application easier to test, maintain, and extend.
 
 

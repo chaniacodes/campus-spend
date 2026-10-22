@@ -10,6 +10,7 @@ from expense_logic import (
     calculate_category_totals,
     get_current_month,
     get_month_expenses,
+    filter_expenses,
 )
 
 
@@ -242,6 +243,59 @@ def show_category_analytics(expenses):
         print(f"{category}: ₹{amount:.2f} ({percentage:.1f}%)")
 
 
+def filter_expenses_menu(expenses):
+    """Let the user filter expenses by category and date range."""
+    if not expenses:
+        print("\nNo expenses available to filter.")
+        return
+
+    print("\n--- Filter Expenses ---")
+    print("Leave a field blank to skip that filter.")
+
+    category = input("Category: ").strip()
+    start_date = input("Start date (YYYY-MM-DD): ").strip()
+    end_date = input("End date (YYYY-MM-DD): ").strip()
+
+    # Validate the supplied dates.
+    for date_value, label in [
+        (start_date, "Start date"),
+        (end_date, "End date"),
+    ]:
+        if date_value:
+            try:
+                datetime.strptime(date_value, "%Y-%m-%d")
+            except ValueError:
+                print(f"{label} must use YYYY-MM-DD format.")
+                return
+
+    if start_date and end_date and start_date > end_date:
+        print("Start date cannot be after end date.")
+        return
+
+    results = filter_expenses(
+        expenses,
+        category=category or None,
+        start_date=start_date or None,
+        end_date=end_date or None,
+    )
+
+    if not results:
+        print("\nNo matching expenses found.")
+        return
+
+    print(f"\nFound {len(results)} matching expense(s):")
+
+    for expense in results:
+        expense_date = expense.get("date") or "Unknown"
+        print(
+            f"{expense_date} | "
+            f"{expense['category']} | "
+            f"₹{expense['amount']:.2f}"
+        )
+
+    total = sum(expense["amount"] for expense in results)
+    print(f"\nTotal of matching expenses: ₹{total:.2f}")
+
 
 def main():
     expenses = load_expenses()
@@ -255,7 +309,8 @@ def main():
         print("5. Category analytics")
         print("6. Edit expense")
         print("7. Delete expense")
-        print("8. Exit")
+        print("8. Filter Expenses")
+        print("9. Exit")
 
         choice = input("Choose an option: ").strip()
 
@@ -281,11 +336,15 @@ def main():
             delete_expense(expenses)
 
         elif choice == "8":
+            filter_expenses_menu(expenses)
+        elif choice == "9":
             print("Thank you for using CampusSpend!")
             break
 
         else:
-            print("Invalid choice. Please select an option from 1 to 8.")
+            print("Invalid choice. Please select an option from 1 to 9.")
+
+
 
 
 if __name__ == "__main__":

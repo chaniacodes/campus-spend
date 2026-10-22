@@ -6,6 +6,7 @@ from unittest.mock import patch
 from expense_logic import (
     calculate_monthly_totals,
     calculate_category_totals,
+    filter_expenses,
 )
 import storage
 
@@ -294,6 +295,42 @@ class TestCampusSpend(unittest.TestCase):
 
         self.assertEqual(reloaded_expenses[0]["id"], first_id)
         self.assertEqual(reloaded_expenses[0]["category"], "Food")
+
+    
+    # Expense filtering tests
+
+    def test_filter_by_category(self):
+        result = filter_expenses(self.expenses, category="food")
+
+        self.assertEqual(len(result), 2)
+        self.assertTrue(
+            all(expense["category"] == "Food" for expense in result)
+        )
+
+    def test_filter_by_date_range(self):
+        result = filter_expenses(
+            self.expenses,
+            start_date="2026-10-01",
+            end_date="2026-10-31",
+        )
+
+        self.assertEqual(len(result), 2)
+
+    def test_filter_by_category_and_date_range(self):
+        result = filter_expenses(
+            self.expenses,
+            category="Food",
+            start_date="2026-10-01",
+            end_date="2026-10-31",
+        )
+
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["amount"], 120.0)
+
+    def test_filter_returns_empty_list_when_no_matches(self):
+        result = filter_expenses(self.expenses, category="Shopping")
+
+        self.assertEqual(result, [])
 
 
 
