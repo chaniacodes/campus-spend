@@ -58,3 +58,42 @@ Without persistence, expenses disappear when the program closes. JSON lets Campu
 - A loop can aggregate multiple transactions into category totals.
 - `sorted()` can sort dictionary items using a custom key.
 - Percentage = (category amount / total spending) * 100.
+
+## Unit Testing in Python
+
+### What is unit testing?
+Unit testing means testing individual parts of a program automatically to check whether they behave as expected.
+
+Python has a built-in testing framework called `unittest`, so we don't need to install an extra package.
+
+### Important concepts
+- **Test case:** A test that checks a particular behavior.
+- **Assertion:** A check that compares the actual result with the expected result.
+- `self.assertEqual(actual, expected)`: Checks whether two values are equal.
+- `self.assertTrue(condition)`: Checks whether a condition is true.
+- `setUp()`: Prepares test data before each test runs.
+- `unittest.main()`: Runs the tests when the test file is executed directly.
+
+### Our CampusSpend tests
+We created `tests/test_main.py` to test:
+1. Whether monthly filtering returns the correct transactions.
+2. Whether transactions from other months are excluded.
+3. Whether a month with no transactions returns an empty list.
+4. Whether the monthly budget is ₹5,000.
+
+### How to run the tests
+From the project's root folder, run:
+
+```bash
+py -m unittest discover -s tests -v
+```
+
+- `py -m unittest`: Runs Python's testing framework.
+- `discover`: Automatically finds test files.
+- `-s tests`: Looks inside the `tests` folder.
+- `-v`: Displays each test name and its result.
+
+**Successful output:** `Ran 4 tests` followed by `OK`.
+
+### Why testing matters
+Automated tests help us catch bugs when we change existing code. We can rerun them after
