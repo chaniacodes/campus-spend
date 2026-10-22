@@ -3,6 +3,10 @@ import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
+from expense_logic import (
+    calculate_monthly_totals,
+    calculate_category_totals,
+)
 import storage
 
 import main
@@ -114,6 +118,34 @@ class TestCampusSpend(unittest.TestCase):
 
         self.assertIsNone(loaded_expenses[0]["date"])
         self.assertEqual(loaded_expenses[0]["amount"], 100.0)
+
+    def test_calculate_monthly_totals(self):
+        expenses = [
+            {"category": "Food", "amount": 120.0, "date": "2026-10-02"},
+            {"category": "Transport", "amount": 80.0, "date": "2026-10-03"},
+            {"category": "Food", "amount": 50.0, "date": "2026-09-20"},
+        ]
+
+        totals = calculate_monthly_totals(expenses, "2026-10")
+
+        self.assertEqual(totals["budget"], 5000.0)
+        self.assertEqual(totals["total"], 200.0)
+        self.assertEqual(totals["remaining"], 4800.0)
+        self.assertEqual(totals["over_budget"], 0)
+
+    def test_calculate_category_totals(self):
+        expenses = [
+            {"category": "Food", "amount": 120.0, "date": "2026-10-02"},
+            {"category": "Transport", "amount": 80.0, "date": "2026-10-03"},
+            {"category": "Food", "amount": 50.0, "date": "2026-10-04"},
+            {"category": "Food", "amount": 40.0, "date": "2026-09-20"},
+        ]
+
+        totals = calculate_category_totals(expenses, "2026-10")
+
+        self.assertEqual(totals["Food"], 170.0)
+        self.assertEqual(totals["Transport"], 80.0)
+        self.assertEqual(sum(totals.values()), 250.0)
 
 
 if __name__ == "__main__":

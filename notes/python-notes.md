@@ -154,3 +154,53 @@ Invalid records should not silently produce misleading reports.
 ### Regression testing
 A regression test checks that a new code change doesn't break existing behavior. Our legacy-data test verifies that an expense without a date retains its amount and receives `None` as its date rather than today's date.
 
+##  Modules and Separation of Concerns
+
+A **module** is a Python file containing reusable code, such as functions and variables. We can import code from one module into another.
+
+Example:
+```python
+from storage import load_expenses, save_expenses
+```
+
+This imports two functions from `storage.py`.
+
+### Separation of Concerns
+
+Separation of concerns means giving different parts of a program different responsibilities.
+
+In CampusSpend:
+- `main.py` handles the menu and user interaction.
+- `storage.py` handles reading and writing expense data.
+- `expense_logic.py` handles expense filtering and calculations.
+- `tests/` checks whether the program behaves correctly.
+
+This makes code easier to understand, test, debug, and maintain.
+
+### Return Values vs. Printing
+
+`print()` displays information to the user, while `return` sends a result back to the code that called the function.
+
+For example:
+```python
+def add_numbers(a, b):
+    return a + b
+
+result = add_numbers(10, 20)
+print(result)
+```
+
+The function returns `30`, which can be stored, tested, or used in further calculations.
+
+### Unit Testing
+
+A unit test checks a small part of a program independently.
+
+```python
+self.assertEqual(actual, expected)
+```
+
+This checks whether the actual result matches the expected result.
+
+A failing test may indicate a code bug or an incorrect expected value. Always compare the expected result against the input data before changing the implementation.
+

@@ -3,7 +3,13 @@ from datetime import date, datetime
 
 from storage import load_expenses, save_expenses
 
-MONTHLY_BUDGET = 5000.0
+from expense_logic import (
+    MONTHLY_BUDGET,
+    calculate_monthly_totals,
+    calculate_category_totals,
+    get_current_month,
+    get_month_expenses,
+)
 
 
 def add_expense(expenses):
@@ -58,15 +64,6 @@ def view_expenses(expenses):
         )
 
 
-def get_month_expenses(expenses, month):
-    """Return dated transactions for a month in YYYY-MM format."""
-    return [
-        expense for expense in expenses
-        if isinstance(expense.get("date"), str)
-        and expense["date"].startswith(month)
-    ]
-
-
 def view_monthly_expenses(expenses):
     """Display transactions for a selected month."""
     month = input("Enter month (YYYY-MM, e.g. 2026-10): ").strip()
@@ -94,56 +91,40 @@ def view_monthly_expenses(expenses):
 
 
 def show_summary(expenses):
-    """Display the budget summary for the current month."""
-    current_month = date.today().strftime("%Y-%m")
-    monthly_expenses = get_month_expenses(expenses, current_month)
+    month = get_current_month()
+    totals = calculate_monthly_totals(expenses, month)
 
-    total = sum(expense["amount"] for expense in monthly_expenses)
-    remaining = MONTHLY_BUDGET - total
+    print(f"\nMonthly Budget: ₹{totals['budget']:.2f}")
+    print(f"Total Spent: ₹{totals['total']:.2f}")
+    print(f"Remaining Budget: ₹{totals['remaining']:.2f}")
 
-    print(f"\n===== Budget Summary: {current_month} =====")
-    print(f"Monthly budget:   ₹{MONTHLY_BUDGET:.2f}")
-    print(f"Total expenses:   ₹{total:.2f}")
-    print(f"Remaining budget: ₹{remaining:.2f}")
-
-    if remaining < 0:
-        print(f"Over budget by ₹{-remaining:.2f}")
+    if totals["over_budget"] > 0:
+        print(f"You are over budget by ₹{totals['over_budget']:.2f}")
     else:
-        print("You are within your budget!")
+        print("You are within your budget.")
 
 
 def show_category_analytics(expenses):
-    """Show spending totals and percentages by category."""
-    current_month = date.today().strftime("%Y-%m")
-    monthly_expenses = get_month_expenses(expenses, current_month)
+    month = get_current_month()
+    category_totals = calculate_category_totals(expenses, month)
 
-    if not monthly_expenses:
+    if not category_totals:
         print("\nNo expenses recorded for this month.")
         return
 
-    category_totals = {}
+    total_spent = sum(category_totals.values())
 
-    for expense in monthly_expenses:
-        category = expense["category"]
-        amount = expense["amount"]
+    print("\nCategory-wise Spending:")
 
-        category_totals[category] = (
-            category_totals.get(category, 0) + amount
-        )
-
-    total = sum(category_totals.values())
-
-    print(f"\n===== Category Analytics: {current_month} =====")
-
-    for category, amount in sorted(
+    sorted_categories = sorted(
         category_totals.items(),
         key=lambda item: item[1],
-        reverse=True
-    ):
-        percentage = (amount / total) * 100
-        print(f"{category}: ₹{amount:.2f} ({percentage:.1f}%)")
+        reverse=True,
+    )
 
-    print(f"\nTotal spending: ₹{total:.2f}")
+    for category, amount in sorted_categories:
+        percentage = (amount / total_spent) * 100
+        print(f"{category}: ₹{amount:.2f} ({percentage:.1f}%)")
 
 
 def main():
