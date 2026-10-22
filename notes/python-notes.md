@@ -348,4 +348,130 @@ For editing and deleting, useful scenarios include:
 - Rejecting invalid transaction numbers.
 - Handling an empty expense list.
 
+##  UUIDs, Persistent IDs, and Data Migration
+
+### 1. What is a UUID?
+
+**UUID** stands for *Universally Unique Identifier*. It is an identifier used to distinguish one record from another.
+
+In CampusSpend, every expense needs its own ID so we can edit or delete the correct transaction, even if multiple expenses have the same category and amount.
+
+```python
+import uuid
+
+expense_id = uuid.uuid4().hex
+print(expense_id)
+```
+
+- `uuid` is Python's built-in module for generating UUIDs.
+- `uuid.uuid4()` generates a random UUID.
+- `.hex` represents the UUID as a hexadecimal string without hyphens.
+
+Example output:
+
+```text
+a1b2c3d4e5f6478890abcdef12345678
+```
+
+The output will be different each time.
+
+### 2. Adding an ID to an expense
+
+When a new expense is created, generate its ID and store it with the other information.
+
+```python
+expense = {
+    "id": uuid.uuid4().hex,
+    "category": "Food",
+    "amount": 150.0,
+    "date": "2026-10-22"
+}
+```
+
+Each expense now has four fields: `id`, `category`, `amount`, and `date`.
+
+**Why use an ID instead of the category or amount?**
+
+Two expenses can have the same category, amount, and date. A unique ID lets us distinguish them reliably.
+
+### 3. What is data migration?
+
+**Data migration** means updating existing saved data to work with a newer version of an application.
+
+Suppose an older version of CampusSpend saved expenses like this:
+
+```python
+{
+    "category": "Food",
+    "amount": 100.0,
+    "date": "2026-10-22"
+}
+```
+
+The newer version expects every expense to have an ID. We must update older records that don't have one.
+
+```python
+if "id" not in expense:
+    expense["id"] = uuid.uuid4().hex
+    migrated = True
+```
+
+- `"id" not in expense` checks whether the record lacks an ID.
+- A new ID is generated only when the ID is missing.
+- `migrated = True` records that the data was changed.
+
+### 4. Why do we use a migration flag?
+
+A migration flag helps us determine whether the saved data needs updating.
+
+```python
+migrated = False
+
+# Check and update old records here.
+
+if migrated:
+    save_expenses(expenses)
+```
+
+Initially, `migrated` is `False`.
+
+If any record needs updating, it becomes `True`. We then save the updated records to the JSON file.
+
+This avoids unnecessarily rewriting the file every time the application starts.
+
+### 5. What are persistent IDs?
+
+A **persistent ID** remains the same after the application closes and restarts.
+
+Our application:
+1. Loads the expenses from the JSON file.
+2. Generates IDs for older records that don't have them.
+3. Saves the updated records.
+4. Loads the same IDs on subsequent runs.
+
+This is important because generating a new ID every time an expense is loaded would make its identity unstable.
+
+### 6. How we tested ID migration
+
+Our test, `test_legacy_expense_receives_persistent_id`, checks that:
+
+- An old expense without an ID receives one.
+- The generated ID is not empty.
+- Loading the file again preserves the same ID.
+- The expense's existing category remains unchanged.
+
+**Key testing concept:** A good test checks both that a new feature works and that existing data is preserved.
+
+### Quick revision
+
+| Concept | Meaning |
+|---|---|
+| UUID | An identifier designed to be unique |
+| `uuid.uuid4().hex` | Generates a random UUID as a hexadecimal string |
+| Data migration | Updating older saved data for a newer application version |
+| Persistent ID | An ID that stays the same across application restarts |
+| Migration flag | Tracks whether saved data has been changed |
+| Regression testing | Checking that existing functionality still works after changes |
+
+
 
