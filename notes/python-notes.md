@@ -125,3 +125,32 @@ File storage is essential for an expense tracker. These tests help verify that t
 
 ### Current test coverage
 CampusSpend currently has 9 unit tests covering monthly filtering, the budget constant, invalid expense inputs, and JSON file storage.
+
+## Handling Legacy Data Safely
+
+### What is legacy data?
+Legacy data is information saved by an older version of a program. When we add new features, older records may not contain the fields our updated program expects.
+
+### The problem in CampusSpend
+Earlier versions of CampusSpend saved expenses without a date. Assigning today's date to those transactions could make monthly spending reports inaccurate.
+
+### Our solution
+- `expense.get("date")` safely retrieves a date when available.
+- Missing dates are represented by `None`, meaning the date is unknown.
+- `get_month_expenses()` excludes transactions without a known date.
+- Transaction history displays `Unknown date` instead of inventing a date.
+- The application no longer automatically rewrites the entire data file at startup.
+
+### Data validation
+When loading JSON records, we check that:
+- The overall data is a list.
+- Each transaction is a dictionary.
+- The category is a string.
+- The amount is a positive number.
+- A supplied date follows the `YYYY-MM-DD` format.
+
+Invalid records should not silently produce misleading reports.
+
+### Regression testing
+A regression test checks that a new code change doesn't break existing behavior. Our legacy-data test verifies that an expense without a date retains its amount and receives `None` as its date rather than today's date.
+

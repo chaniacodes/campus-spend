@@ -7,8 +7,9 @@ DATA_FILE = Path(__file__).parent / "expenses.json"
 MONTHLY_BUDGET = 5000.0
 
 
+
 def load_expenses():
-    """Load saved expenses and add dates to older records."""
+    """Load saved expenses without inventing dates for older records."""
     if not DATA_FILE.exists():
         return []
 
@@ -23,8 +24,24 @@ def load_expenses():
             if not isinstance(expense, dict):
                 raise ValueError("Invalid transaction record.")
 
+            if not isinstance(expense.get("category"), str):
+                raise ValueError("Invalid expense category.")
+
+            if (
+                not isinstance(expense.get("amount"), (int, float))
+                or isinstance(expense.get("amount"), bool)
+                or expense["amount"] <= 0
+            ):
+                raise ValueError("Invalid expense amount.")
+
             if "date" not in expense:
-                expense["date"] = date.today().isoformat()
+                expense["date"] = None
+
+            elif expense["date"] is not None:
+                try:
+                    datetime.strptime(expense["date"], "%Y-%m-%d")
+                except (ValueError, TypeError):
+                    raise ValueError("Invalid transaction date.")
 
         return expenses
 
@@ -85,17 +102,18 @@ def view_expenses(expenses):
 
     for index, expense in enumerate(expenses, start=1):
         print(
-            f"{index}. {expense['date']} | "
+            f"{index}. {expense.get('date') or 'Unknown date'} | "          
             f"{expense['category']} | "
             f"₹{expense['amount']:.2f}"
         )
 
 
 def get_month_expenses(expenses, month):
-    """Return transactions for a month in YYYY-MM format."""
+    """Return dated transactions for a month in YYYY-MM format."""
     return [
         expense for expense in expenses
-        if expense["date"].startswith(month)
+        if isinstance(expense.get("date"), str)
+        and expense["date"].startswith(month)
     ]
 
 
@@ -119,7 +137,7 @@ def view_monthly_expenses(expenses):
 
     for index, expense in enumerate(monthly_expenses, start=1):
         print(
-            f"{index}. {expense['date']} | "
+            f"{index}. {expense.get('date') or 'Unknown date'} | "
             f"{expense['category']} | "
             f"₹{expense['amount']:.2f}"
         )
@@ -181,8 +199,7 @@ def show_category_analytics(expenses):
 def main():
     expenses = load_expenses()
 
-    # Save dates added to older transactions.
-    save_expenses(expenses)
+    
 
     while True:
         print("\n===== CampusSpend =====")

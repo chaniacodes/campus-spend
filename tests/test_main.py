@@ -1,6 +1,6 @@
 
-import unittest
 import tempfile
+import unittest
 from pathlib import Path
 from unittest.mock import patch
 
@@ -95,6 +95,24 @@ class TestCampusSpend(unittest.TestCase):
                 loaded_expenses = load_expenses()
 
         self.assertEqual(loaded_expenses, [])
+
+    # Legacy transaction test
+
+    def test_legacy_expense_without_date_is_preserved(self):
+        legacy_expense = {
+            "category": "Food",
+            "amount": 100.0,
+        }
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            test_file = Path(temp_dir) / "legacy.json"
+
+            with patch.object(main, "DATA_FILE", test_file):
+                save_expenses([legacy_expense])
+                loaded_expenses = load_expenses()
+
+        self.assertIsNone(loaded_expenses[0]["date"])
+        self.assertEqual(loaded_expenses[0]["amount"], 100.0)
 
 
 if __name__ == "__main__":
