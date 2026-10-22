@@ -232,4 +232,120 @@ For CampusSpend, the failed-replacement test verifies that the original expense 
 
 Atomic replacement reduces the risk of partial writes, but it is not a substitute for backups and does not guarantee protection against every hardware or filesystem failure.
 
+## Editing and Deleting Expenses
+
+### Accessing List Items by Index
+
+A list stores items in order, and each item has an index starting at `0`.
+
+```python
+expenses = ["Food", "Transport", "Books"]
+
+print(expenses[0])  # Food
+print(expenses[1])  # Transport
+```
+
+If a user selects transaction number `1`, we convert it to index `0`:
+
+```python
+index = choice - 1
+```
+
+This is necessary because menu numbering starts at `1`, while Python list indexing starts at `0`.
+
+### Copying Dictionaries
+
+An expense is stored as a dictionary. The `copy()` method creates a separate, shallow copy of that dictionary.
+
+```python
+original_expense = expenses[index].copy()
+updated_expense = original_expense.copy()
+```
+
+We edit `updated_expense` while keeping `original_expense` unchanged. If saving fails, the original data can be restored.
+
+### Removing and Restoring List Items
+
+`pop(index)` removes an item and returns it.
+
+```python
+deleted_expense = expenses.pop(index)
+```
+
+If saving fails, `insert(index, item)` restores the transaction at its original position:
+
+```python
+expenses.insert(index, deleted_expense)
+```
+
+This helps prevent accidental data loss when a deletion cannot be saved.
+
+### Input Validation
+
+User input from `input()` is always returned as a string.
+
+```python
+amount_input = input("Enter amount: ").strip()
+```
+
+We convert it to a number and catch invalid input:
+
+```python
+try:
+    amount = float(amount_input)
+
+    if amount <= 0:
+        print("Amount must be positive.")
+
+except ValueError:
+    print("Enter a valid numeric amount.")
+```
+
+`.strip()` removes whitespace at the beginning and end of a string. Empty input can also be used to mean "keep the current value" when editing.
+
+### Exception Handling and Rollback
+
+Saving a file may raise an `OSError`. In edit and delete operations, we catch the error and restore the original in-memory transaction.
+
+This is a simple form of rollback: undoing an in-memory change when the operation cannot be completed successfully.
+
+### Mocking in Unit Tests
+
+`unittest.mock.patch()` lets tests replace real behaviour with controlled behaviour.
+
+For example:
+
+```python
+with patch("builtins.input", side_effect=["1", "", "200"]):
+    edit_expense(expenses)
+```
+
+This simulates selecting transaction 1, keeping its category unchanged, and entering an amount of 200.
+
+We can also simulate a storage failure:
+
+```python
+with patch.object(
+    main,
+    "save_expenses",
+    side_effect=OSError("Simulated save failure"),
+):
+    edit_expense(expenses)
+```
+
+This allows us to test error handling without deliberately damaging files.
+
+### Testing Important Scenarios
+
+For every feature, test more than the successful case.
+
+For editing and deleting, useful scenarios include:
+
+- Updating a transaction successfully.
+- Rejecting invalid amounts.
+- Cancelling a deletion.
+- Restoring an original transaction when saving fails.
+- Rejecting invalid transaction numbers.
+- Handling an empty expense list.
+
 

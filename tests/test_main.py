@@ -15,6 +15,8 @@ from main import (
     get_month_expenses,
     load_expenses,
     save_expenses,
+    edit_expense,
+    delete_expense,
     MONTHLY_BUDGET,
 )
 
@@ -175,6 +177,89 @@ class TestCampusSpend(unittest.TestCase):
                 saved_data = storage.load_expenses()
 
                 self.assertEqual(saved_data, original_expenses)
+
+    
+    def test_edit_expense_updates_amount(self):
+        expenses = [
+            {"category": "Food", "amount": 100.0, "date": "2026-10-22"}
+        ]
+
+        with patch("builtins.input", side_effect=["1", "", "200"]):
+            with patch.object(main, "save_expenses"):
+                edit_expense(expenses)
+
+        self.assertEqual(expenses[0]["amount"], 200.0)
+        self.assertEqual(expenses[0]["category"], "Food")
+
+    def test_edit_expense_rejects_invalid_amount(self):
+        expenses = [
+            {"category": "Food", "amount": 100.0, "date": "2026-10-22"}
+        ]
+
+        with patch("builtins.input", side_effect=["1", "", "abc"]):
+            with patch.object(main, "save_expenses") as mock_save:
+                edit_expense(expenses)
+
+        self.assertEqual(expenses[0]["amount"], 100.0)
+        mock_save.assert_not_called()
+
+    def test_delete_expense_can_be_cancelled(self):
+        expenses = [
+            {"category": "Food", "amount": 100.0, "date": "2026-10-22"}
+        ]
+
+        with patch("builtins.input", side_effect=["1", "no"]):
+            with patch.object(main, "save_expenses") as mock_save:
+                delete_expense(expenses)
+
+        self.assertEqual(len(expenses), 1)
+        self.assertEqual(expenses[0]["amount"], 100.0)
+        mock_save.assert_not_called()
+
+    def test_delete_expense_removes_transaction(self):
+        expenses = [
+            {"category": "Food", "amount": 100.0, "date": "2026-10-22"}
+        ]
+
+        with patch("builtins.input", side_effect=["1", "yes"]):
+            with patch.object(main, "save_expenses"):
+                delete_expense(expenses)
+
+        self.assertEqual(expenses, [])
+
+    
+    def test_edit_expense_restores_original_if_save_fails(self):
+        expenses = [
+            {"category": "Food", "amount": 100.0, "date": "2026-10-22"}
+        ]
+        original = expenses[0].copy()
+
+        with patch("builtins.input", side_effect=["1", "", "200"]):
+            with patch.object(
+                main,
+                "save_expenses",
+                side_effect=OSError("Simulated save failure"),
+            ):
+                edit_expense(expenses)
+
+        self.assertEqual(expenses[0], original)
+
+    def test_delete_expense_restores_transaction_if_save_fails(self):
+        expenses = [
+            {"category": "Food", "amount": 100.0, "date": "2026-10-22"}
+        ]
+        original = expenses[0].copy()
+
+        with patch("builtins.input", side_effect=["1", "yes"]):
+            with patch.object(
+                main,
+                "save_expenses",
+                side_effect=OSError("Simulated save failure"),
+            ):
+                delete_expense(expenses)
+
+        self.assertEqual(expenses, [original])
+
 
 
 

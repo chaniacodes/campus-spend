@@ -64,6 +64,119 @@ def view_expenses(expenses):
         )
 
 
+
+def edit_expense(expenses):
+    """Edit an existing expense and save the changes."""
+    if not expenses:
+        print("\nNo expenses available to edit.")
+        return
+
+    view_expenses(expenses)
+
+    try:
+        choice = int(input("\nEnter the transaction number to edit: "))
+
+        if choice < 1 or choice > len(expenses):
+            print("Invalid transaction number.")
+            return
+
+    except ValueError:
+        print("Please enter a valid number.")
+        return
+
+    index = choice - 1
+
+    # Keep the original safe in case saving fails.
+    original_expense = expenses[index].copy()
+    updated_expense = original_expense.copy()
+
+    print("\nPress Enter to keep the existing value.")
+
+    category = input(
+        f"Category [{original_expense['category']}]: "
+    ).strip()
+
+    if category:
+        updated_expense["category"] = category.title()
+
+    amount_input = input(
+        f"Amount [{original_expense['amount']}]: "
+    ).strip()
+
+    if amount_input:
+        try:
+            amount = float(amount_input)
+
+            if amount <= 0:
+                print("Amount must be greater than zero.")
+                return
+
+            updated_expense["amount"] = amount
+
+        except ValueError:
+            print("Please enter a valid numeric amount.")
+            return
+
+    # Avoid writing anything if the user made no changes.
+    if updated_expense == original_expense:
+        print("No changes made.")
+        return
+
+    expenses[index] = updated_expense
+
+    try:
+        save_expenses(expenses)
+        print("Expense updated successfully!")
+
+    except OSError as error:
+        expenses[index] = original_expense
+        print(f"Could not save the updated expense: {error}")
+
+
+def delete_expense(expenses):
+    """Delete an expense after user confirmation."""
+    if not expenses:
+        print("\nNo expenses available to delete.")
+        return
+
+    view_expenses(expenses)
+
+    try:
+        choice = int(input("\nEnter the transaction number to delete: "))
+
+        if choice < 1 or choice > len(expenses):
+            print("Invalid transaction number.")
+            return
+
+    except ValueError:
+        print("Please enter a valid number.")
+        return
+
+    index = choice - 1
+    deleted_expense = expenses[index]
+
+    confirmation = input(
+        f"Delete {deleted_expense['category']} expense of "
+        f"₹{deleted_expense['amount']:.2f}? (yes/no): "
+    ).strip().lower()
+
+    if confirmation not in ("yes", "y"):
+        print("Deletion cancelled.")
+        return
+
+    # Remove it temporarily, then restore it if saving fails.
+    deleted_expense = expenses.pop(index)
+
+    try:
+        save_expenses(expenses)
+        print("Expense deleted successfully!")
+
+    except OSError as error:
+        expenses.insert(index, deleted_expense)
+        print(f"Could not save the deletion: {error}")
+
+
+
 def view_monthly_expenses(expenses):
     """Display transactions for a selected month."""
     month = input("Enter month (YYYY-MM, e.g. 2026-10): ").strip()
@@ -127,38 +240,54 @@ def show_category_analytics(expenses):
         print(f"{category}: ₹{amount:.2f} ({percentage:.1f}%)")
 
 
+
 def main():
     expenses = load_expenses()
-
-    
 
     while True:
         print("\n===== CampusSpend =====")
         print("1. Add expense")
         print("2. View all transactions")
-        print("3. View current month's budget summary")
-        print("4. View transactions for a month")
-        print("5. View category analytics")
-        print("6. Exit")
+        print("3. Monthly budget summary")
+        print("4. View expenses for a month")
+        print("5. Category analytics")
+        print("6. Edit expense")
+        print("7. Delete expense")
+        print("8. Exit")
 
-        choice = input("Choose an option (1-6): ").strip()
+        choice = input("Choose an option: ").strip()
 
         if choice == "1":
             add_expense(expenses)
+
         elif choice == "2":
             view_expenses(expenses)
+
         elif choice == "3":
             show_summary(expenses)
+
         elif choice == "4":
             view_monthly_expenses(expenses)
+
         elif choice == "5":
             show_category_analytics(expenses)
+
         elif choice == "6":
-            print("Goodbye!")
+            edit_expense(expenses)
+
+        elif choice == "7":
+            delete_expense(expenses)
+
+        elif choice == "8":
+            print("Thank you for using CampusSpend!")
             break
+
         else:
-            print("Invalid choice. Enter 1, 2, 3, 4, 5, or 6.")
+            print("Invalid choice. Please select an option from 1 to 8.")
 
 
 if __name__ == "__main__":
     main()
+
+
+
