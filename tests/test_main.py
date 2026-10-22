@@ -3,6 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
+import storage
 
 import main
 from main import (
@@ -81,7 +82,7 @@ class TestCampusSpend(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             test_file = Path(temp_dir) / "test_expenses.json"
 
-            with patch.object(main, "DATA_FILE", test_file):
+            with patch.object(storage, "DATA_FILE", test_file):
                 save_expenses(sample_expenses)
                 loaded_expenses = load_expenses()
 
@@ -91,7 +92,7 @@ class TestCampusSpend(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             test_file = Path(temp_dir) / "missing.json"
 
-            with patch.object(main, "DATA_FILE", test_file):
+            with patch.object(storage, "DATA_FILE", test_file):
                 loaded_expenses = load_expenses()
 
         self.assertEqual(loaded_expenses, [])
@@ -107,7 +108,7 @@ class TestCampusSpend(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             test_file = Path(temp_dir) / "legacy.json"
 
-            with patch.object(main, "DATA_FILE", test_file):
+            with patch.object(storage, "DATA_FILE", test_file):
                 save_expenses([legacy_expense])
                 loaded_expenses = load_expenses()
 
