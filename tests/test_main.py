@@ -147,6 +147,36 @@ class TestCampusSpend(unittest.TestCase):
         self.assertEqual(totals["Transport"], 80.0)
         self.assertEqual(sum(totals.values()), 250.0)
 
+    
+    def test_failed_replacement_preserves_original_file(self):
+        original_expenses = [
+            {"category": "Food", "amount": 100.0, "date": "2026-10-22"}
+        ]
+        updated_expenses = [
+            {"category": "Food", "amount": 200.0, "date": "2026-10-22"}
+        ]
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            test_file = Path(temp_dir) / "expenses.json"
+            test_file.write_text(
+                '[{"category": "Food", "amount": 100.0, "date": "2026-10-22"}]',
+                encoding="utf-8",
+            )
+
+            with patch.object(storage, "DATA_FILE", test_file):
+                with patch.object(
+                    Path,
+                    "replace",
+                    side_effect=OSError("Simulated replacement failure"),
+                ):
+                    with self.assertRaises(OSError):
+                        storage.save_expenses(updated_expenses)
+
+                saved_data = storage.load_expenses()
+
+                self.assertEqual(saved_data, original_expenses)
+
+
 
 if __name__ == "__main__":
     unittest.main()

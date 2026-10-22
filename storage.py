@@ -1,5 +1,6 @@
 
 import json
+import os
 from pathlib import Path
 from datetime import datetime
 
@@ -51,7 +52,24 @@ def load_expenses():
         raise SystemExit(1)
 
 
+
 def save_expenses(expenses):
-    """Save expenses to the JSON file."""
-    with DATA_FILE.open("w", encoding="utf-8") as file:
-        json.dump(expenses, file, indent=4)
+    """Save expenses safely using a temporary file."""
+    temp_file = DATA_FILE.with_name(DATA_FILE.name + ".tmp")
+
+    try:
+        with temp_file.open("w", encoding="utf-8") as file:
+            json.dump(expenses, file, indent=4)
+            file.flush()
+            os.fsync(file.fileno())
+
+        temp_file.replace(DATA_FILE)
+
+    except OSError:
+        try:
+            temp_file.unlink(missing_ok=True)
+        except OSError:
+            pass
+
+        raise
+

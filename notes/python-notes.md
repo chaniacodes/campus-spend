@@ -204,3 +204,32 @@ This checks whether the actual result matches the expected result.
 
 A failing test may indicate a code bug or an incorrect expected value. Always compare the expected result against the input data before changing the implementation.
 
+## Safer File Storage and Atomic Replacement
+
+When saving important data, writing directly to the original file can be risky. If a write fails midway, the file may become incomplete.
+
+### Temporary-file approach
+
+1. Write the updated data to a temporary file.
+2. Flush buffered data and close the file.
+3. Replace the original file only after writing succeeds.
+4. Clean up the temporary file if saving fails.
+
+### Important Python concepts
+
+- `Path.with_name()` creates a new path with a different filename in the same directory.
+- `file.flush()` pushes buffered data toward the operating system.
+- `os.fsync(file.fileno())` requests that the operating system flush file data to storage.
+- `Path.replace()` replaces the destination path with the new file.
+- `raise` propagates an exception to the caller.
+- `unittest.mock.patch()` can simulate failures without actually damaging files.
+
+### Failure testing
+
+A good test suite checks both successful operations and failure scenarios.
+
+For CampusSpend, the failed-replacement test verifies that the original expense data remains intact when replacing the file raises an `OSError`.
+
+Atomic replacement reduces the risk of partial writes, but it is not a substitute for backups and does not guarantee protection against every hardware or filesystem failure.
+
+
