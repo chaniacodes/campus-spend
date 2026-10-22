@@ -97,3 +97,31 @@ py -m unittest discover -s tests -v
 
 ### Why testing matters
 Automated tests help us catch bugs when we change existing code. We can rerun them after
+
+## Testing File Storage in Python
+
+### 1. Saving and loading JSON data
+- `save_expenses(expenses)` writes transaction data to a JSON file.
+- `load_expenses()` reads saved transactions back into Python.
+- `json.dump()` converts Python data into JSON and writes it to a file.
+- `json.load()` reads JSON data and converts it back into Python objects.
+
+### 2. Temporary files
+`tempfile.TemporaryDirectory()` creates a temporary folder for testing. Python automatically cleans it up when the block finishes.
+
+We use temporary files so automated tests don't accidentally change our real expense data.
+
+### 3. Mocking with patch
+`patch.object(main, "DATA_FILE", test_file)` temporarily changes the file path used by our program.
+
+During the test, CampusSpend uses the temporary test file instead of the real `expenses.json`.
+
+### 4. New tests in CampusSpend
+- `test_save_and_load_expenses`: checks that saved transactions can be loaded correctly.
+- `test_load_expenses_returns_empty_list_when_file_missing`: checks that loading returns an empty list if the file doesn't exist.
+
+### 5. Why these tests matter
+File storage is essential for an expense tracker. These tests help verify that transactions persist correctly and that a first-time user can run the application without an existing data file.
+
+### Current test coverage
+CampusSpend currently has 9 unit tests covering monthly filtering, the budget constant, invalid expense inputs, and JSON file storage.
