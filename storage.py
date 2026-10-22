@@ -1,6 +1,7 @@
 
 import json
 import os
+import uuid
 from pathlib import Path
 from datetime import datetime
 
@@ -8,8 +9,9 @@ from datetime import datetime
 DATA_FILE = Path(__file__).parent / "expenses.json"
 
 
+
 def load_expenses():
-    """Load expenses and validate the saved transaction records."""
+    """Load, validate, and migrate saved expense records."""
     if not DATA_FILE.exists():
         return []
 
@@ -19,6 +21,8 @@ def load_expenses():
 
         if not isinstance(expenses, list):
             raise ValueError("Expected a list of expenses.")
+
+        migrated = False
 
         for expense in expenses:
             if not isinstance(expense, dict):
@@ -38,6 +42,7 @@ def load_expenses():
 
             if "date" not in expense:
                 expense["date"] = None
+                migrated = True
 
             elif expense["date"] is not None:
                 try:
@@ -45,11 +50,26 @@ def load_expenses():
                 except (ValueError, TypeError):
                     raise ValueError("Invalid transaction date.")
 
+            if "id" not in expense:
+                expense["id"] = uuid.uuid4().hex
+                migrated = True
+
+            elif not isinstance(expense["id"], str) or not expense["id"].strip():
+                raise ValueError("Invalid transaction ID.")
+
+        # Persist generated IDs so they remain stable after restarting.
+        if migrated:
+            save_expenses(expenses)
+
         return expenses
 
     except (json.JSONDecodeError, ValueError) as error:
         print(f"Error reading expenses: {error}")
         raise SystemExit(1)
+    except OSError as error:
+        print(f"Error accessing expense storage: {error}")
+        raise SystemExit(1)
+
 
 
 

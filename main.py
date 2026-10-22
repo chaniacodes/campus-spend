@@ -1,4 +1,5 @@
 
+import uuid
 from datetime import date, datetime
 
 from storage import load_expenses, save_expenses
@@ -32,6 +33,7 @@ def add_expense(expenses):
         return
 
     transaction = {
+        "id": uuid.uuid4().hex,
         "category": category,
         "amount": amount,
         "date": date.today().isoformat()

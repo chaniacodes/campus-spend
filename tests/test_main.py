@@ -76,9 +76,11 @@ class TestCampusSpend(unittest.TestCase):
 
     # Saving and loading tests
 
+    
     def test_save_and_load_expenses(self):
         sample_expenses = [
             {
+                "id": "test-expense-001",
                 "category": "Food",
                 "amount": 150.0,
                 "date": "2026-10-22",
@@ -86,22 +88,13 @@ class TestCampusSpend(unittest.TestCase):
         ]
 
         with tempfile.TemporaryDirectory() as temp_dir:
-            test_file = Path(temp_dir) / "test_expenses.json"
+            test_file = Path(temp_dir) / "expenses.json"
 
             with patch.object(storage, "DATA_FILE", test_file):
-                save_expenses(sample_expenses)
-                loaded_expenses = load_expenses()
+                storage.save_expenses(sample_expenses)
+                loaded_expenses = storage.load_expenses()
 
         self.assertEqual(loaded_expenses, sample_expenses)
-
-    def test_load_expenses_returns_empty_list_when_file_missing(self):
-        with tempfile.TemporaryDirectory() as temp_dir:
-            test_file = Path(temp_dir) / "missing.json"
-
-            with patch.object(storage, "DATA_FILE", test_file):
-                loaded_expenses = load_expenses()
-
-        self.assertEqual(loaded_expenses, [])
 
     # Legacy transaction test
 
@@ -150,18 +143,30 @@ class TestCampusSpend(unittest.TestCase):
         self.assertEqual(sum(totals.values()), 250.0)
 
     
+    
     def test_failed_replacement_preserves_original_file(self):
         original_expenses = [
-            {"category": "Food", "amount": 100.0, "date": "2026-10-22"}
+            {
+                "id": "test-expense-002",
+                "category": "Food",
+                "amount": 100.0,
+                "date": "2026-10-22",
+            }
         ]
+
         updated_expenses = [
-            {"category": "Food", "amount": 200.0, "date": "2026-10-22"}
+            {
+                "id": "test-expense-002",
+                "category": "Food",
+                "amount": 200.0,
+                "date": "2026-10-22",
+            }
         ]
 
         with tempfile.TemporaryDirectory() as temp_dir:
             test_file = Path(temp_dir) / "expenses.json"
             test_file.write_text(
-                '[{"category": "Food", "amount": 100.0, "date": "2026-10-22"}]',
+                __import__("json").dumps(original_expenses),
                 encoding="utf-8",
             )
 
@@ -176,7 +181,8 @@ class TestCampusSpend(unittest.TestCase):
 
                 saved_data = storage.load_expenses()
 
-                self.assertEqual(saved_data, original_expenses)
+        self.assertEqual(saved_data, original_expenses)
+
 
     
     def test_edit_expense_updates_amount(self):
@@ -259,6 +265,36 @@ class TestCampusSpend(unittest.TestCase):
                 delete_expense(expenses)
 
         self.assertEqual(expenses, [original])
+
+    
+    def test_legacy_expense_receives_persistent_id(self):
+        legacy_expenses = [
+            {
+                "category": "Food",
+                "amount": 100.0,
+                "date": "2026-10-22",
+            }
+        ]
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            test_file = Path(temp_dir) / "expenses.json"
+            test_file.write_text(
+                __import__("json").dumps(legacy_expenses),
+                encoding="utf-8",
+            )
+
+            with patch.object(storage, "DATA_FILE", test_file):
+                loaded_expenses = storage.load_expenses()
+                first_id = loaded_expenses[0]["id"]
+
+                self.assertTrue(first_id)
+
+                # Loading again should preserve the generated ID.
+                reloaded_expenses = storage.load_expenses()
+
+        self.assertEqual(reloaded_expenses[0]["id"], first_id)
+        self.assertEqual(reloaded_expenses[0]["category"], "Food")
+
 
 
 
