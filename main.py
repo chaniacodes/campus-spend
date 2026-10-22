@@ -1,67 +1,216 @@
 
 import json
+from pathlib import Path
+from datetime import date, datetime
 
-monthly_budget = 5000.0
+DATA_FILE = Path(__file__).parent / "expenses.json"
+MONTHLY_BUDGET = 5000.0
 
-# Load previously saved transactions.
-try:
-    with open("expenses.json", "r") as file:
-        expenses = json.load(file)
-except FileNotFoundError:
-    expenses = []
 
-while True:
-    print("\n--- CampusSpend ---")
+def load_expenses():
+    """Load saved expenses and add dates to older records."""
+    if not DATA_FILE.exists():
+        return []
 
+    try:
+        with DATA_FILE.open("r", encoding="utf-8") as file:
+            expenses = json.load(file)
+
+        if not isinstance(expenses, list):
+            raise ValueError("Expected a list of expenses.")
+
+        for expense in expenses:
+            if not isinstance(expense, dict):
+                raise ValueError("Invalid transaction record.")
+
+            if "date" not in expense:
+                expense["date"] = date.today().isoformat()
+
+        return expenses
+
+    except (json.JSONDecodeError, ValueError) as error:
+        print(f"Error reading expenses: {error}")
+        raise SystemExit(1)
+
+
+def save_expenses(expenses):
+    """Save expenses to the JSON file."""
+    with DATA_FILE.open("w", encoding="utf-8") as file:
+        json.dump(expenses, file, indent=4)
+
+
+def add_expense(expenses):
+    """Add a new expense with today's date."""
     category = input("Enter expense category: ").strip().title()
 
     if not category:
         print("Category cannot be empty.")
-        continue
+        return
 
     try:
         amount = float(input("Enter expense amount (₹): "))
 
         if amount <= 0:
-            print("Expense must be greater than zero.")
-            continue
+            print("Amount must be greater than zero.")
+            return
 
     except ValueError:
         print("Please enter a valid number.")
-        continue
+        return
 
-    expense = {
+    transaction = {
         "category": category,
-        "amount": amount
+        "amount": amount,
+        "date": date.today().isoformat()
     }
-    expenses.append(expense)
 
-    # Save all transactions to the JSON file.
-    with open("expenses.json", "w") as file:
-        json.dump(expenses, file, indent=4)
+    expenses.append(transaction)
 
-    choice = input("Add another expense? (yes/no): ").strip().lower()
+    try:
+        save_expenses(expenses)
+        print("Expense saved successfully!")
 
-    while choice not in ("yes", "no"):
-        choice = input("Please enter yes or no: ").strip().lower()
+    except OSError as error:
+        expenses.pop()
+        print(f"Could not save expense: {error}")
 
-    if choice == "no":
-        break
 
-total_expenses = sum(expense["amount"] for expense in expenses)
-remaining_budget = monthly_budget - total_expenses
+def view_expenses(expenses):
+    """Display all transactions."""
+    print("\n===== Transaction History =====")
 
-print("\n===== CampusSpend Summary =====")
-print(f"Monthly budget:   ₹{monthly_budget:.2f}")
-print(f"Total expenses:   ₹{total_expenses:.2f}")
-print(f"Remaining budget: ₹{remaining_budget:.2f}")
+    if not expenses:
+        print("No expenses recorded yet.")
+        return
 
-print("\n===== Transaction History =====")
+    for index, expense in enumerate(expenses, start=1):
+        print(
+            f"{index}. {expense['date']} | "
+            f"{expense['category']} | "
+            f"₹{expense['amount']:.2f}"
+        )
 
-for number, expense in enumerate(expenses, start=1):
-    print(f"{number}. {expense['category']}: ₹{expense['amount']:.2f}")
 
-if remaining_budget < 0:
-    print("\nWarning: You have exceeded your budget!")
-else:
-    print("\nYou are within your budget!")
+def get_month_expenses(expenses, month):
+    """Return transactions for a month in YYYY-MM format."""
+    return [
+        expense for expense in expenses
+        if expense["date"].startswith(month)
+    ]
+
+
+def view_monthly_expenses(expenses):
+    """Display transactions for a selected month."""
+    month = input("Enter month (YYYY-MM, e.g. 2026-10): ").strip()
+
+    try:
+        datetime.strptime(month, "%Y-%m")
+    except ValueError:
+        print("Invalid month. Use YYYY-MM, for example 2026-10.")
+        return
+
+    monthly_expenses = get_month_expenses(expenses, month)
+
+    print(f"\n===== Expenses for {month} =====")
+
+    if not monthly_expenses:
+        print("No expenses recorded for this month.")
+        return
+
+    for index, expense in enumerate(monthly_expenses, start=1):
+        print(
+            f"{index}. {expense['date']} | "
+            f"{expense['category']} | "
+            f"₹{expense['amount']:.2f}"
+        )
+
+
+def show_summary(expenses):
+    """Display the budget summary for the current month."""
+    current_month = date.today().strftime("%Y-%m")
+    monthly_expenses = get_month_expenses(expenses, current_month)
+
+    total = sum(expense["amount"] for expense in monthly_expenses)
+    remaining = MONTHLY_BUDGET - total
+
+    print(f"\n===== Budget Summary: {current_month} =====")
+    print(f"Monthly budget:   ₹{MONTHLY_BUDGET:.2f}")
+    print(f"Total expenses:   ₹{total:.2f}")
+    print(f"Remaining budget: ₹{remaining:.2f}")
+
+    if remaining < 0:
+        print(f"Over budget by ₹{-remaining:.2f}")
+    else:
+        print("You are within your budget!")
+
+
+def show_category_analytics(expenses):
+    """Show spending totals and percentages by category."""
+    current_month = date.today().strftime("%Y-%m")
+    monthly_expenses = get_month_expenses(expenses, current_month)
+
+    if not monthly_expenses:
+        print("\nNo expenses recorded for this month.")
+        return
+
+    category_totals = {}
+
+    for expense in monthly_expenses:
+        category = expense["category"]
+        amount = expense["amount"]
+
+        category_totals[category] = (
+            category_totals.get(category, 0) + amount
+        )
+
+    total = sum(category_totals.values())
+
+    print(f"\n===== Category Analytics: {current_month} =====")
+
+    for category, amount in sorted(
+        category_totals.items(),
+        key=lambda item: item[1],
+        reverse=True
+    ):
+        percentage = (amount / total) * 100
+        print(f"{category}: ₹{amount:.2f} ({percentage:.1f}%)")
+
+    print(f"\nTotal spending: ₹{total:.2f}")
+
+
+def main():
+    expenses = load_expenses()
+
+    # Save dates added to older transactions.
+    save_expenses(expenses)
+
+    while True:
+        print("\n===== CampusSpend =====")
+        print("1. Add expense")
+        print("2. View all transactions")
+        print("3. View current month's budget summary")
+        print("4. View transactions for a month")
+        print("5. View category analytics")
+        print("6. Exit")
+
+        choice = input("Choose an option (1-6): ").strip()
+
+        if choice == "1":
+            add_expense(expenses)
+        elif choice == "2":
+            view_expenses(expenses)
+        elif choice == "3":
+            show_summary(expenses)
+        elif choice == "4":
+            view_monthly_expenses(expenses)
+        elif choice == "5":
+            show_category_analytics(expenses)
+        elif choice == "6":
+            print("Goodbye!")
+            break
+        else:
+            print("Invalid choice. Enter 1, 2, 3, 4, 5, or 6.")
+
+
+if __name__ == "__main__":
+    main()
