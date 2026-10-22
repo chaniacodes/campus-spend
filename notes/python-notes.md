@@ -50,3 +50,11 @@ Without persistence, expenses disappear when the program closes. JSON lets Campu
 - `datetime.strptime(value, "%Y-%m")` validates a year-month input.
 - `startswith()` checks whether a string begins with a given value.
 - List comprehensions can filter transactions based on a condition.
+
+## Dictionaries and Category Analytics
+
+- Dictionaries store key-value pairs.
+- `dict.get(key, default)` returns a value or a default if the key is missing.
+- A loop can aggregate multiple transactions into category totals.
+- `sorted()` can sort dictionary items using a custom key.
+- Percentage = (category amount / total spending) * 100.
