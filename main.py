@@ -1,4 +1,3 @@
-
 import uuid
 from datetime import date, datetime
 from expense_logic import MONTHLY_BUDGET
@@ -17,6 +16,8 @@ from expense_logic import (
     get_month_expenses,
     filter_expenses,
     calculate_budget_status,
+    generate_monthly_wrapped,
+    generate_annual_wrapped,
 )
 
 
@@ -43,7 +44,7 @@ def add_expense(expenses):
         "id": uuid.uuid4().hex,
         "category": category,
         "amount": amount,
-        "date": date.today().isoformat()
+        "date": date.today().isoformat(),
     }
 
     expenses.append(transaction)
@@ -67,11 +68,10 @@ def view_expenses(expenses):
 
     for index, expense in enumerate(expenses, start=1):
         print(
-            f"{index}. {expense.get('date') or 'Unknown date'} | "          
+            f"{index}. {expense.get('date') or 'Unknown date'} | "
             f"{expense['category']} | "
             f"₹{expense['amount']:.2f}"
         )
-
 
 
 def edit_expense(expenses):
@@ -101,16 +101,12 @@ def edit_expense(expenses):
 
     print("\nPress Enter to keep the existing value.")
 
-    category = input(
-        f"Category [{original_expense['category']}]: "
-    ).strip()
+    category = input(f"Category [{original_expense['category']}]: ").strip()
 
     if category:
         updated_expense["category"] = category.title()
 
-    amount_input = input(
-        f"Amount [{original_expense['amount']}]: "
-    ).strip()
+    amount_input = input(f"Amount [{original_expense['amount']}]: ").strip()
 
     if amount_input:
         try:
@@ -164,10 +160,14 @@ def delete_expense(expenses):
     index = choice - 1
     deleted_expense = expenses[index]
 
-    confirmation = input(
-        f"Delete {deleted_expense['category']} expense of "
-        f"₹{deleted_expense['amount']:.2f}? (yes/no): "
-    ).strip().lower()
+    confirmation = (
+        input(
+            f"Delete {deleted_expense['category']} expense of "
+            f"₹{deleted_expense['amount']:.2f}? (yes/no): "
+        )
+        .strip()
+        .lower()
+    )
 
     if confirmation not in ("yes", "y"):
         print("Deletion cancelled.")
@@ -183,7 +183,6 @@ def delete_expense(expenses):
     except OSError as error:
         expenses.insert(index, deleted_expense)
         print(f"Could not save the deletion: {error}")
-
 
 
 def view_monthly_expenses(expenses):
@@ -210,7 +209,6 @@ def view_monthly_expenses(expenses):
             f"{expense['category']} | "
             f"₹{expense['amount']:.2f}"
         )
-
 
 
 def show_summary(expenses):
@@ -254,11 +252,7 @@ def show_summary(expenses):
             print(f"  Remaining: ₹{status['remaining']:.2f}")
 
             if status["over_budget"] > 0:
-                print(
-                    f"  Over budget by: "
-                    f"₹{status['over_budget']:.2f}"
-                )
-
+                print(f"  Over budget by: " f"₹{status['over_budget']:.2f}")
 
 
 def show_category_analytics(expenses):
@@ -329,9 +323,7 @@ def filter_expenses_menu(expenses):
     for expense in results:
         expense_date = expense.get("date") or "Unknown"
         print(
-            f"{expense_date} | "
-            f"{expense['category']} | "
-            f"₹{expense['amount']:.2f}"
+            f"{expense_date} | " f"{expense['category']} | " f"₹{expense['amount']:.2f}"
         )
 
     total = sum(expense["amount"] for expense in results)
@@ -351,14 +343,13 @@ def manage_budgets(expenses):
 
     current_budget = settings["monthly_budgets"].get(month)
 
-    print(f"\nMonthly budget for {month}: "
-          f"{current_budget if current_budget is not None else 'Not set'}")
+    print(
+        f"\nMonthly budget for {month}: "
+        f"{current_budget if current_budget is not None else 'Not set'}"
+    )
 
-    budget_input = input(
-        "Enter monthly budget (leave blank to keep current): "
-    ).strip()
+    budget_input = input("Enter monthly budget (leave blank to keep current): ").strip()
 
-    
     if budget_input:
         try:
             monthly_budget = float(budget_input)
@@ -383,8 +374,7 @@ def manage_budgets(expenses):
             break
 
         amount_input = input(
-            f"Budget for {category} "
-            f"[{category_budgets.get(category, 'Not set')}]: "
+            f"Budget for {category} " f"[{category_budgets.get(category, 'Not set')}]: "
         ).strip()
 
         if not amount_input:
@@ -410,6 +400,127 @@ def manage_budgets(expenses):
         print(f"Could not save budget settings: {error}")
 
 
+def show_monthly_wrapped(expenses):
+    """Display a spending recap for a selected month."""
+    from datetime import datetime
+
+    month = input(
+        "Enter month for Wrapped (YYYY-MM), or press Enter for current month: "
+    ).strip()
+
+    if not month:
+        month = get_current_month()
+    else:
+        try:
+            datetime.strptime(month, "%Y-%m")
+        except ValueError:
+            print("Invalid month. Please use YYYY-MM, like 2026-10.")
+            return
+
+    settings = load_budget_settings()
+    monthly_budget = settings["monthly_budgets"].get(month, 0.0)
+
+    if monthly_budget <= 0:
+        print(f"\nNo monthly budget is configured for {month}.")
+        print("Use Manage Budgets (option 9) to set one.")
+
+    result = generate_monthly_wrapped(expenses, month, monthly_budget)
+
+    print(f"\n{'=' * 12} CAMPUSSPEND WRAPPED {'=' * 12}")
+    print(f"Month: {result['month']}")
+    print(f"Total spent: ₹{result['total_spent']:.2f}")
+
+    if result["top_category"] is None:
+        print("Top category: No expenses recorded")
+    else:
+        print(
+            f"Top category: {result['top_category']} " f"(₹{result['top_amount']:.2f})"
+        )
+
+    if monthly_budget > 0:
+        print(f"Monthly budget used: " f"{result['budget_percentage']:.1f}%")
+        print(f"Monthly budget: ₹{monthly_budget:.2f}")
+        print(f"Remaining: " f"₹{monthly_budget - result['total_spent']:.2f}")
+
+    print("\nSpending by category:")
+    if result["category_totals"]:
+        for category, amount in sorted(
+            result["category_totals"].items(),
+            key=lambda item: item[1],
+            reverse=True,
+        ):
+            print(f"- {category}: ₹{amount:.2f}")
+    else:
+        print("No expenses for this month.")
+
+    print("=" * 42)
+
+
+def show_annual_wrapped(expenses):
+    """Display a spending recap for a selected year."""
+    from datetime import datetime
+
+    year = input(
+        "Enter year for Wrapped (YYYY), or press Enter for current year: "
+    ).strip()
+
+    if not year:
+        year = str(datetime.today().year)
+    else:
+        try:
+            datetime.strptime(year, "%Y")
+            if len(year) != 4:
+                raise ValueError
+        except ValueError:
+            print("Invalid year. Please enter a year like 2026.")
+            return
+
+    result = generate_annual_wrapped(expenses, year)
+
+    print(f"\n{'=' * 12} CAMPUSSPEND ANNUAL WRAPPED {'=' * 12}")
+    print(f"Year: {result['year']}")
+    print(f"Total spent: ₹{result['total_spent']:.2f}")
+
+    if result["top_category"] is not None:
+        print(
+            f"Top category: {result['top_category']} " f"(₹{result['top_amount']:.2f})"
+        )
+    else:
+        print("Top category: No expenses recorded")
+
+    if result["highest_month"] is not None:
+        print(
+            f"Highest-spending month: {result['highest_month']} "
+            f"(₹{result['highest_month_amount']:.2f})"
+        )
+        print(
+            "Average spending per active month: "
+            f"₹{result['average_monthly_spending']:.2f}"
+        )
+    else:
+        print("Highest-spending month: No expenses recorded")
+        print("Average spending per active month: ₹0.00")
+
+    print("\nSpending by category:")
+    if result["category_totals"]:
+        for category, amount in sorted(
+            result["category_totals"].items(),
+            key=lambda item: item[1],
+            reverse=True,
+        ):
+            print(f"- {category}: ₹{amount:.2f}")
+    else:
+        print("No expenses for this year.")
+
+    print("\nMonthly breakdown:")
+    if result["monthly_totals"]:
+        for month, amount in sorted(result["monthly_totals"].items()):
+            print(f"- {month}: ₹{amount:.2f}")
+    else:
+        print("No monthly data available.")
+
+    print("=" * 48)
+
 
 def main():
     expenses = load_expenses()
@@ -425,7 +536,9 @@ def main():
         print("7. Delete expense")
         print("8. Filter expenses")
         print("9. Manage budgets")
-        print("10. Exit")
+        print("10. Monthly Wrapped")
+        print("11. Annual Wrapped")
+        print("12. Exit")
 
         choice = input("Choose an option: ").strip()
 
@@ -453,20 +566,21 @@ def main():
         elif choice == "8":
             filter_expenses_menu(expenses)
         elif choice == "9":
-          manage_budgets(expenses)
+            manage_budgets(expenses)
 
         elif choice == "10":
-          print("Goodbye!")
-          break 
+            show_monthly_wrapped(expenses)
+
+        elif choice == "11":
+            show_annual_wrapped(expenses)
+
+        elif choice == "12":
+            print("Goodbye!")
+            break
 
         else:
-            print("Invalid choice. Please select an option from 1 to 10.")
-
-
+            print("Invalid choice. Please select an option from 1 to 12.")
 
 
 if __name__ == "__main__":
     main()
-
-
-

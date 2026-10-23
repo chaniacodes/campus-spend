@@ -539,4 +539,145 @@ Users can apply multiple filters together. For example, category `Food` and Octo
 
 Keeping these responsibilities separate makes the application easier to test, maintain, and extend.
 
+## Configurable Budgets in CampusSpend
+
+### 1. Why make budgets configurable?
+
+A hard-coded budget is fixed in the source code. A configurable budget lets the user choose their own monthly spending limit and category-specific limits.
+
+In CampusSpend, budget settings are stored separately from expense transactions in `budgets.json`.
+
+This keeps two kinds of data separate:
+- `expenses.json` stores transaction records.
+- `budgets.json` stores the user's budget settings.
+
+### 2. Monthly and category budgets
+
+A monthly budget limits total spending for a selected month. A category budget limits spending within a particular category.
+
+For example:
+- Monthly budget: ₹5,000
+- Food budget: ₹2,000
+- Transport budget: ₹800
+
+A category can exceed its individual budget even when total monthly spending remains within the monthly limit.
+
+### 3. Calculating budget status
+
+For each budget, we calculate:
+
+- **Remaining:** Budget − Amount spent
+- **Overspending:** The amount spent beyond the budget, or zero if the budget has not been exceeded.
+
+Example:
+
+```python
+budget = 2000
+spent = 2300
+
+remaining = budget - spent
+over_budget = max(0, spent - budget)
+```
+
+Here, `remaining` is `-300` and `over_budget` is `300`.
+
+The negative remaining amount indicates that spending exceeded the limit. `max(0, ...)` prevents the overspending value from becoming negative.
+
+### 4. Using `.setdefault()`
+
+```python
+category_budgets = settings["category_budgets"].setdefault(month, {})
+```
+
+`setdefault(key, default)` returns the existing value for a dictionary key. If the key does not exist, it creates the key with the supplied default value.
+
+Here, it ensures that the selected month has a category-budget dictionary before category budgets are added.
+
+---
+
+## Spending Analytics for CampusSpend Wrapped
+
+### 1. Calculating budget usage percentage
+
+A percentage makes it easier to understand how much of a budget has been used.
+
+Formula:
+
+**Budget usage (%) = (Amount spent ÷ Budget) × 100**
+
+```python
+def calculate_budget_percentage(total_spent, budget):
+    if budget <= 0:
+        return 0.0
+    return (total_spent / budget) * 100
+```
+
+For a budget of ₹5,000 and spending of ₹2,500, the result is `50.0`, meaning 50% of the budget has been used.
+
+The function returns `0.0` when the budget is zero or negative, avoiding division by zero and an undefined percentage.
+
+### 2. Finding the top-spending category
+
+The top-spending category is the category with the greatest total spending during a selected month.
+
+```python
+top_category = max(category_totals, key=category_totals.get)
+```
+
+- `max()` finds the item with the greatest value.
+- `key=category_totals.get` tells Python to compare categories using their spending totals.
+
+We first check whether the dictionary contains any categories. If it is empty, there is no top category to report.
+
+CampusSpend returns `(None, 0.0)` when there are no expenses for the month. This prevents the application from reporting a made-up category.
+
+### 3. Combining calculations into a monthly recap
+
+A monthly recap combines several calculations into one result.
+
+For example, `generate_monthly_wrapped()` can gather:
+
+- Selected month
+- Total amount spent
+- Highest-spending category and its total
+- Percentage of the monthly budget used
+- Spending totals for each category
+
+The function returns these values in a dictionary. Other parts of the application can then display the information without repeating the calculations.
+
+This follows separation of concerns: calculation functions determine the results, while the user interface decides how to present them.
+
+### 4. Why return a dictionary?
+
+A dictionary gives each result a meaningful key.
+
+```python
+summary = {
+    "total_spent": 2500.0,
+    "top_category": "Food",
+    "budget_percentage": 50.0
+}
+```
+
+The values can be accessed by key:
+
+```python
+print(summary["total_spent"])
+```
+
+This is useful when the recap contains several related results, especially when we later build a visual interface.
+
+### 5. Testing analytics functions
+
+Analytics functions should be tested with different scenarios:
+
+- A month with several expenses
+- A month with no expenses
+- A category that has the highest total
+- A budget with zero or a negative value
+- Spending below, equal to, and above the budget
+
+Tests should verify the returned values rather than only checking what appears on screen. This makes the calculations easier to test independently of the interface.
+
+**Important:** A spending recap must be based on the user's actual saved transactions. If sample data is used during development, it should be identified as sample data rather than presented as the user's spending history.
 
