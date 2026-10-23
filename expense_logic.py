@@ -69,3 +69,34 @@ def filter_expenses(expenses, category=None, start_date=None, end_date=None):
         filtered.append(expense)
 
     return filtered
+
+
+def calculate_budget_status(expenses, month, monthly_budget, category_budgets):
+    """Calculate monthly and category budget usage for a selected month."""
+    monthly_expenses = get_month_expenses(expenses, month)
+
+    total_spent = sum(
+        expense["amount"] for expense in monthly_expenses
+    )
+
+    category_totals = calculate_category_totals(expenses, month)
+
+    category_status = {}
+
+    for category, budget in category_budgets.items():
+        spent = category_totals.get(category, 0.0)
+
+        category_status[category] = {
+            "budget": budget,
+            "spent": spent,
+            "remaining": budget - spent,
+            "over_budget": max(0.0, spent - budget),
+        }
+
+    return {
+        "monthly_budget": monthly_budget,
+        "total_spent": total_spent,
+        "remaining": monthly_budget - total_spent,
+        "over_budget": max(0.0, total_spent - monthly_budget),
+        "categories": category_status,
+    }

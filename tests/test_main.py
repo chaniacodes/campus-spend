@@ -7,6 +7,7 @@ from expense_logic import (
     calculate_monthly_totals,
     calculate_category_totals,
     filter_expenses,
+    calculate_budget_status,
 )
 import storage
 
@@ -331,6 +332,176 @@ class TestCampusSpend(unittest.TestCase):
         result = filter_expenses(self.expenses, category="Shopping")
 
         self.assertEqual(result, [])
+
+    
+    # Budget settings storage tests
+
+    def test_budget_settings_default_when_file_missing(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            test_file = Path(temp_dir) / "budgets.json"
+
+            with patch.object(storage, "BUDGETS_FILE", test_file):
+                settings = storage.load_budget_settings()
+
+        self.assertEqual(
+            settings,
+            {
+                "monthly_budgets": {},
+                "category_budgets": {},
+            },
+        )
+
+    def test_budget_settings_save_and_load(self):
+        sample_settings = {
+            "monthly_budgets": {"2026-10": 8000.0},
+            "category_budgets": {
+                "2026-10": {"Food": 2500.0, "Transport": 1000.0}
+            },
+        }
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            test_file = Path(temp_dir) / "budgets.json"
+
+            with patch.object(storage, "BUDGETS_FILE", test_file):
+                storage.save_budget_settings(sample_settings)
+                loaded_settings = storage.load_budget_settings()
+
+        self.assertEqual(loaded_settings, sample_settings)
+
+    def test_invalid_monthly_budget_is_rejected(self):
+        invalid_settings = {
+            "monthly_budgets": {"2026-10": -500.0},
+            "category_budgets": {},
+        }
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            test_file = Path(temp_dir) / "budgets.json"
+            test_file.write_text(
+                __import__("json").dumps(invalid_settings),
+                encoding="utf-8",
+            )
+
+            with patch.object(storage, "BUDGETS_FILE", test_file):
+                with self.assertRaises(SystemExit):
+                    storage.load_budget_settings()
+
+    
+    # Budget calculation tests
+
+    def test_budget_status_calculates_remaining_amounts(self):
+        expenses = [
+            {"category": "Food", "amount": 1800.0, "date": "2026-10-02"},
+            {"category": "Transport", "amount": 500.0, "date": "2026-10-05"},
+        ]
+
+        result = calculate_budget_status(
+            expenses,
+            "2026-10",
+            8000.0,
+            {"Food": 2500.0, "Transport": 1000.0},
+        )
+
+        self.assertEqual(result["total_spent"], 2300.0)
+        self.assertEqual(result["remaining"], 5700.0)
+        self.assertEqual(result["over_budget"], 0.0)
+        self.assertEqual(result["categories"]["Food"]["remaining"], 700.0)
+        self.assertEqual(
+            result["categories"]["Transport"]["remaining"], 500.0
+        )
+
+    def test_budget_status_detects_overspending(self):
+        expenses = [
+            {"category": "Food", "amount": 3000.0, "date": "2026-10-02"},
+        ]
+
+        result = calculate_budget_status(
+            expenses,
+            "2026-10",
+            2500.0,
+            {"Food": 2000.0},
+        )
+
+        self.assertEqual(result["over_budget"], 500.0)
+        self.assertEqual(result["categories"]["Food"]["over_budget"], 1000.0)
+        self.assertEqual(result["categories"]["Food"]["remaining"], -1000.0)
+
+    def test_budget_status_ignores_other_months(self):
+        expenses = [
+            {"category": "Food", "amount": 500.0, "date": "2026-09-20"},
+            {"category": "Food", "amount": 200.0, "date": "2026-10-02"},
+        ]
+
+        result = calculate_budget_status(
+            expenses,
+            "2026-10",
+            1000.0,
+            {"Food": 500.0},
+        )
+
+        self.assertEqual(result["total_spent"], 200.0)
+        self.assertEqual(result["categories"]["Food"]["remaining"], 300.0)
+
+   
+    def test_manage_budgets_saves_monthly_and_category_budgets(self):
+        initial_settings = {
+            "monthly_budgets": {},
+            "category_budgets": {},
+        }
+
+        user_inputs = [
+            "2026-10",
+            "8000",
+            "Food",
+            "2500",
+            "",
+        ]
+
+        with patch.object(
+            main, "load_budget_settings", return_value=initial_settings
+        ), patch.object(main, "save_budget_settings") as mock_save, patch(
+            "builtins.input", side_effect=user_inputs
+        ):
+            main.manage_budgets([])
+
+        saved_settings = mock_save.call_args[0][0]
+
+        self.assertEqual(saved_settings["monthly_budgets"]["2026-10"], 8000.0)
+        self.assertEqual(
+            saved_settings["category_budgets"]["2026-10"]["Food"], 2500.0
+        )
+
+    def test_manage_budgets_rejects_invalid_month(self):
+        with patch.object(
+            main,
+            "load_budget_settings",
+            return_value={
+                "monthly_budgets": {},
+                "category_budgets": {},
+            },
+        ), patch.object(main, "save_budget_settings") as mock_save, patch(
+            "builtins.input", return_value="2026-13"
+        ):
+            main.manage_budgets([])
+
+        mock_save.assert_not_called()
+
+    def test_manage_budgets_rejects_invalid_monthly_budget(self):
+        user_inputs = ["2026-10", "abc"]
+
+        with patch.object(
+            main,
+            "load_budget_settings",
+            return_value={
+                "monthly_budgets": {},
+                "category_budgets": {},
+            },
+        ), patch.object(main, "save_budget_settings") as mock_save, patch(
+            "builtins.input", side_effect=user_inputs
+        ):
+            main.manage_budgets([])
+
+        mock_save.assert_not_called()
+
 
 
 

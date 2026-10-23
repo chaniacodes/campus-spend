@@ -1,16 +1,22 @@
 
 import uuid
 from datetime import date, datetime
+from expense_logic import MONTHLY_BUDGET
 
-from storage import load_expenses, save_expenses
+from storage import (
+    load_expenses,
+    save_expenses,
+    load_budget_settings,
+    save_budget_settings,
+)
 
 from expense_logic import (
-    MONTHLY_BUDGET,
     calculate_monthly_totals,
     calculate_category_totals,
     get_current_month,
     get_month_expenses,
     filter_expenses,
+    calculate_budget_status,
 )
 
 
@@ -206,18 +212,53 @@ def view_monthly_expenses(expenses):
         )
 
 
-def show_summary(expenses):
-    month = get_current_month()
-    totals = calculate_monthly_totals(expenses, month)
 
-    print(f"\nMonthly Budget: ₹{totals['budget']:.2f}")
-    print(f"Total Spent: ₹{totals['total']:.2f}")
+def show_summary(expenses):
+    """Display the budget summary for the current month."""
+    month = get_current_month()
+    settings = load_budget_settings()
+
+    monthly_budget = settings["monthly_budgets"].get(month)
+
+    if monthly_budget is None:
+        print(f"\nNo monthly budget set for {month}.")
+        print("Choose option 9 to configure your budget.")
+        return
+
+    category_budgets = settings["category_budgets"].get(month, {})
+
+    totals = calculate_budget_status(
+        expenses,
+        month,
+        monthly_budget,
+        category_budgets,
+    )
+
+    print(f"\n===== Budget Summary: {month} =====")
+    print(f"Monthly Budget: ₹{totals['monthly_budget']:.2f}")
+    print(f"Total Spent: ₹{totals['total_spent']:.2f}")
     print(f"Remaining Budget: ₹{totals['remaining']:.2f}")
 
     if totals["over_budget"] > 0:
         print(f"You are over budget by ₹{totals['over_budget']:.2f}")
     else:
         print("You are within your budget.")
+
+    if totals["categories"]:
+        print("\nCategory Budget Status:")
+
+        for category, status in totals["categories"].items():
+            print(f"\n{category}")
+            print(f"  Budget: ₹{status['budget']:.2f}")
+            print(f"  Spent: ₹{status['spent']:.2f}")
+            print(f"  Remaining: ₹{status['remaining']:.2f}")
+
+            if status["over_budget"] > 0:
+                print(
+                    f"  Over budget by: "
+                    f"₹{status['over_budget']:.2f}"
+                )
+
 
 
 def show_category_analytics(expenses):
@@ -297,6 +338,79 @@ def filter_expenses_menu(expenses):
     print(f"\nTotal of matching expenses: ₹{total:.2f}")
 
 
+def manage_budgets(expenses):
+    """Let the user configure monthly and category budgets."""
+    settings = load_budget_settings()
+    month = input("Enter month (YYYY-MM): ").strip()
+
+    try:
+        datetime.strptime(month, "%Y-%m")
+    except ValueError:
+        print("Invalid month. Use YYYY-MM, such as 2026-10.")
+        return
+
+    current_budget = settings["monthly_budgets"].get(month)
+
+    print(f"\nMonthly budget for {month}: "
+          f"{current_budget if current_budget is not None else 'Not set'}")
+
+    budget_input = input(
+        "Enter monthly budget (leave blank to keep current): "
+    ).strip()
+
+    
+    if budget_input:
+        try:
+            monthly_budget = float(budget_input)
+
+            if monthly_budget <= 0:
+                print("Budget must be greater than zero.")
+                return
+
+        except ValueError:
+            print("Please enter a valid numeric budget.")
+            return
+
+        settings["monthly_budgets"][month] = monthly_budget
+
+    category_budgets = settings["category_budgets"].setdefault(month, {})
+    print("\nEnter a category budget, or leave the category blank to finish.")
+
+    while True:
+        category = input("Category: ").strip().title()
+
+        if not category:
+            break
+
+        amount_input = input(
+            f"Budget for {category} "
+            f"[{category_budgets.get(category, 'Not set')}]: "
+        ).strip()
+
+        if not amount_input:
+            continue
+
+        try:
+            amount = float(amount_input)
+            if amount <= 0:
+                print("Budget must be greater than zero.")
+                continue
+        except ValueError:
+            print("Please enter a valid numeric budget.")
+            continue
+
+        category_budgets[category] = amount
+        print(f"{category} budget updated.")
+
+    try:
+        save_budget_settings(settings)
+        print(f"\nBudget settings saved for {month}.")
+
+    except OSError as error:
+        print(f"Could not save budget settings: {error}")
+
+
+
 def main():
     expenses = load_expenses()
 
@@ -309,8 +423,9 @@ def main():
         print("5. Category analytics")
         print("6. Edit expense")
         print("7. Delete expense")
-        print("8. Filter Expenses")
-        print("9. Exit")
+        print("8. Filter expenses")
+        print("9. Manage budgets")
+        print("10. Exit")
 
         choice = input("Choose an option: ").strip()
 
@@ -338,11 +453,14 @@ def main():
         elif choice == "8":
             filter_expenses_menu(expenses)
         elif choice == "9":
-            print("Thank you for using CampusSpend!")
-            break
+          manage_budgets(expenses)
+
+        elif choice == "10":
+          print("Goodbye!")
+          break 
 
         else:
-            print("Invalid choice. Please select an option from 1 to 9.")
+            print("Invalid choice. Please select an option from 1 to 10.")
 
 
 
