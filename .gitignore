@@ -4,3 +4,6 @@ __pycache__/
 
 # Personal expense data
 expenses.json
+
+#Personal budget data
+budgets.json

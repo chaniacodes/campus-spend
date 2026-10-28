@@ -681,3 +681,89 @@ Tests should verify the returned values rather than only checking what appears o
 
 **Important:** A spending recap must be based on the user's actual saved transactions. If sample data is used during development, it should be identified as sample data rather than presented as the user's spending history.
 
+## Annual Wrapped and Grouping Transactions by Year
+
+### 1. Filtering transactions by year
+
+CampusSpend Annual Wrapped analyses expenses recorded during a selected year.
+
+```python
+expense["date"].startswith(year + "-")
+```
+
+For example, when `year = "2026"`, this matches dates beginning with `"2026-"`, such as `"2026-10-22"`.
+
+The hyphen matters because it distinguishes the year prefix from other possible strings. Transactions with unknown dates (`None`) must be excluded before calling `startswith()`.
+
+### 2. Grouping spending by month
+
+Annual Wrapped needs to calculate the total spent in each month.
+
+```python
+month = expense["date"][:7]
+```
+
+For a date like `"2026-10-22"`, slicing with `[:7]` extracts `"2026-10"`.
+
+We use this month value as a dictionary key and add each transaction's amount to its monthly total. This is called **aggregation**: combining individual records into summary values.
+
+### 3. Finding the highest-spending month
+
+Once monthly totals have been calculated, we can identify the month with the largest total.
+
+```python
+highest_month = max(monthly_totals, key=monthly_totals.get)
+```
+
+The result is the month key, not the amount spent. We retrieve its corresponding amount separately:
+
+```python
+highest_month_amount = monthly_totals[highest_month]
+```
+
+We must check that `monthly_totals` is not empty before using `max()`, because calling `max()` on an empty dictionary raises `ValueError`.
+
+### 4. Calculating average monthly spending
+
+In CampusSpend Annual Wrapped, the average is calculated across months that contain recorded expenses.
+
+**Average spending = Total yearly spending ÷ Number of months with recorded expenses**
+
+For example, if total spending is ₹3,600 across three months with expenses, the average is ₹1,200 per active month.
+
+This is different from dividing by 12. Dividing by 12 would calculate the average across all calendar months, including months with no recorded transactions.
+
+The application should make clear which average it displays.
+
+### 5. Monthly Wrapped vs. Annual Wrapped
+
+| Monthly Wrapped | Annual Wrapped |
+|---|---|
+| Filters transactions by year and month | Filters transactions by year |
+| Reports total monthly spending | Reports total yearly spending |
+| Identifies the top category for that month | Identifies the top category for the year |
+| Calculates monthly budget usage | Compares spending across months |
+| Shows category totals for one month | Shows category and monthly totals for the year |
+
+Both features reuse the same principle: filter the relevant transactions first, then calculate summaries from the filtered data.
+
+### 6. Handling missing data
+
+An annual recap may have no transactions for the selected year. In this situation, it should report that no expenses were recorded instead of inventing a top category or highest-spending month.
+
+Transactions without known dates are excluded from date-based reports because their correct year cannot be determined.
+
+### 7. Formatting financial output
+
+Python's formatted string syntax can display monetary values with two decimal places:
+
+```python
+print(f"Total spent: ₹{total_spent:.2f}")
+```
+
+The `:.2f` format specifier displays a number with two digits after the decimal point, making financial summaries easier to read consistently.
+
+### Key takeaway
+
+Annual Wrapped is built by grouping transactions at a larger time scale. Filtering determines which transactions belong in the report; aggregation calculates totals; and the recap presents those results in a useful format.
+

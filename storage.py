@@ -1,14 +1,11 @@
-
 import json
 import os
 import uuid
 from pathlib import Path
 from datetime import datetime
 
-
 DATA_FILE = Path(__file__).parent / "expenses.json"
 BUDGETS_FILE = Path(__file__).parent / "budgets.json"
-
 
 
 def load_expenses():
@@ -70,8 +67,6 @@ def load_expenses():
     except OSError as error:
         print(f"Error accessing expense storage: {error}")
         raise SystemExit(1)
-
-
 
 
 def save_expenses(expenses):
@@ -147,9 +142,7 @@ def load_budget_settings():
                     or isinstance(amount, bool)
                     or amount <= 0
                 ):
-                    raise ValueError(
-                        "Category budgets must be positive numbers."
-                    )
+                    raise ValueError("Category budgets must be positive numbers.")
 
         return {
             "monthly_budgets": monthly,
@@ -184,5 +177,3 @@ def save_budget_settings(settings):
             pass
 
         raise
-
-

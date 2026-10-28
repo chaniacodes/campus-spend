@@ -1,3 +1,4 @@
+import uuid
 from datetime import date
 
 MONTHLY_BUDGET = 5000.0
@@ -189,4 +190,40 @@ def generate_annual_wrapped(expenses, year):
         "average_monthly_spending": average_monthly_spending,
         "category_totals": category_totals,
         "monthly_totals": monthly_totals,
+    }
+
+
+def create_expense(amount, category, expense_date, description=""):
+    """Create and validate an expense record."""
+
+    # Validate date
+    if not isinstance(expense_date, str) or not expense_date.strip():
+        raise ValueError("Date cannot be empty.")
+
+    try:
+        parsed_date = date.fromisoformat(expense_date)
+    except ValueError:
+        raise ValueError("Date must be a valid date in YYYY-MM-DD format.") from None
+
+    if parsed_date.isoformat() != expense_date:
+        raise ValueError("Date must be in YYYY-MM-DD format.")
+
+    # Validate amount
+    if isinstance(amount, bool) or not isinstance(amount, (int, float)):
+        raise ValueError("Amount must be a number.")
+
+    if amount <= 0:
+        raise ValueError("Amount must be greater than zero.")
+
+    # Validate category
+    if not isinstance(category, str) or not category.strip():
+        raise ValueError("Category cannot be empty.")
+
+    # Create and return the expense record
+    return {
+        "id": uuid.uuid4().hex,
+        "amount": float(amount),
+        "category": category.strip(),
+        "date": expense_date,
+        "description": description.strip() if isinstance(description, str) else "",
     }

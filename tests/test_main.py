@@ -607,6 +607,47 @@ class TestCampusSpend(unittest.TestCase):
 
         self.assertEqual(result["total_spent"], 150.0)
 
+    def test_create_expense(self):
+        from expense_logic import create_expense
+
+        expense = create_expense(50, "Food", "2026-10-23", "Lunch")
+
+        self.assertEqual(expense["amount"], 50.0)
+        self.assertEqual(expense["category"], "Food")
+        self.assertEqual(expense["date"], "2026-10-23")
+        self.assertEqual(expense["description"], "Lunch")
+        self.assertTrue(expense["id"])
+
+    def test_create_expense_rejects_zero_amount(self):
+        from expense_logic import create_expense
+
+        with self.assertRaises(ValueError):
+            create_expense(0, "Food", "2026-10-23")
+
+    def test_create_expense_rejects_empty_category(self):
+        from expense_logic import create_expense
+
+        with self.assertRaises(ValueError):
+            create_expense(50, "  ", "2026-10-23")
+
+    def test_create_expense_rejects_negative_amount(self):
+        from expense_logic import create_expense
+
+        with self.assertRaises(ValueError):
+            create_expense(-50, "Food", "2026-10-23")
+
+    def test_create_expense_rejects_boolean_amount(self):
+        from expense_logic import create_expense
+
+        with self.assertRaises(ValueError):
+            create_expense(True, "Food", "2026-10-23")
+
+    def test_create_expense_rejects_invalid_date(self):
+        from expense_logic import create_expense
+
+        with self.assertRaises(ValueError):
+            create_expense(50, "Food", "2026-02-30")
+
 
 if __name__ == "__main__":
     unittest.main()
