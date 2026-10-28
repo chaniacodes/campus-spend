@@ -768,27 +768,36 @@ current_status = calculate_budget_status(
 
 # -------------------- SIDEBAR --------------------
 
+
+def go_to_transactions():
+    st.session_state["navigation_page"] = "Transactions"
+
+
 with st.sidebar:
     st.title("💸 CampusSpend")
     st.caption("Your student finance companion")
     st.divider()
 
+    page_options = [
+        "Overview",
+        "Transactions",
+        "Analytics",
+        "Budgets",
+        "Monthly Wrapped",
+        "Annual Wrapped",
+    ]
+
+    if "navigation_page" not in st.session_state:
+        st.session_state["navigation_page"] = "Overview"
+
     page = st.radio(
         "NAVIGATION",
-        [
-            "Overview",
-            "Transactions",
-            "Analytics",
-            "Budgets",
-            "Monthly Wrapped",
-            "Annual Wrapped",
-        ],
+        page_options,
+        key="navigation_page",
     )
 
     st.divider()
     st.caption("Track your spending. Understand your habits.")
-
-
 # ============================================================
 # OVERVIEW
 # ============================================================
@@ -952,7 +961,19 @@ if page == "Overview":
                         unsafe_allow_html=True,
                     )
         else:
-            st.info("No expenses yet. Add your first transaction!")
+            st.markdown("### Your money story starts here")
+            st.caption(
+                "Log your first expense to see your spending, "
+                "track your budget, and build your monthly recap."
+            )
+
+            st.button(
+                "＋ Add your first expense",
+                key="overview_first_expense",
+                type="primary",
+                use_container_width=True,
+                on_click=go_to_transactions,
+            )
 
     st.divider()
 
@@ -962,7 +983,6 @@ if page == "Overview":
         "**Budgets** to manage your limits, or open a Wrapped "
         "page for a spending recap."
     )
-
 
 # ============================================================
 # TRANSACTIONS
@@ -1483,64 +1503,58 @@ elif page == "Budgets":
     st.divider()
     st.subheader("Category Budgets")
     st.caption(
-        "Set a separate spending limit for each category. "
-        "Leave a category unchecked if you don't want a limit for it."
+        "Enable a category to set its spending limit. "
+        "Unchecked categories won't have a separate limit."
     )
 
     category_options = sorted(set(CATEGORIES) | set(saved_category_budgets.keys()))
 
-    with st.form("category_budget_form"):
-        updated_category_budgets = {}
+    updated_category_budgets = {}
 
-        for category_name in category_options:
-            enabled = category_name in saved_category_budgets
+    for category_name in category_options:
+        enabled = category_name in saved_category_budgets
 
-            col1, col2 = st.columns([1, 2])
+        col1, col2 = st.columns([1, 2])
 
-            use_limit = col1.checkbox(
-                f"{category_name}",
-                value=enabled,
-                key=f"budget_enabled_{selected_month}_{category_name}",
-            )
-
-            current_limit = float(saved_category_budgets.get(category_name, 500.0))
-
-            limit = col2.number_input(
-                f"{category_name} limit (₹)",
-                min_value=0.01,
-                value=current_limit,
-                step=50.0,
-                format="%.2f",
-                key=f"budget_limit_{selected_month}_{category_name}",
-                disabled=not use_limit,
-            )
-
-            if use_limit:
-                updated_category_budgets[category_name] = float(limit)
-
-        save_categories = st.form_submit_button(
-            "Save Category Budgets",
-            use_container_width=True,
+        use_limit = col1.checkbox(
+            category_name,
+            value=enabled,
+            key=f"budget_enabled_{selected_month}_{category_name}",
         )
 
-        if save_categories:
-            updated_settings = {
-                "monthly_budgets": settings.get("monthly_budgets", {}).copy(),
-                "category_budgets": settings.get("category_budgets", {}).copy(),
-            }
+        current_limit = float(saved_category_budgets.get(category_name, 0.01))
+        limit = col2.number_input(
+            f"{category_name} limit (₹)",
+            min_value=0.01,
+            value=current_limit,
+            step=50.0,
+            format="%.2f",
+            key=f"budget_limit_{selected_month}_{category_name}",
+            disabled=not use_limit,
+        )
 
-            updated_settings["category_budgets"][
-                selected_month
-            ] = updated_category_budgets
+        if use_limit:
+            updated_category_budgets[category_name] = float(limit)
 
-            try:
-                save_budget_settings(updated_settings)
-            except OSError as error:
-                st.error(f"Could not save category budgets: {error}")
-            else:
-                st.success("Category budgets saved!")
-                st.rerun()
+    if st.button(
+        "Save Category Budgets",
+        use_container_width=True,
+        key="save_category_budgets",
+    ):
+        updated_settings = {
+            "monthly_budgets": settings.get("monthly_budgets", {}).copy(),
+            "category_budgets": settings.get("category_budgets", {}).copy(),
+        }
 
+        updated_settings["category_budgets"][selected_month] = updated_category_budgets
+
+        try:
+            save_budget_settings(updated_settings)
+        except OSError as error:
+            st.error(f"Could not save category budgets: {error}")
+        else:
+            st.success("Category budgets saved!")
+            st.rerun()
     st.divider()
     st.subheader(f"Budget Status — {month_label(selected_month)}")
 
