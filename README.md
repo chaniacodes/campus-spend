@@ -20,44 +20,44 @@ CampusSpend helps students track daily expenses, manage monthly and category-wis
 ### Overview
 The main dashboard provides a quick summary of spending, recent transactions, and category breakdowns.
 
-![CampusSpend Overview 1](screenshots/overview.png/overview1.png)
+![CampusSpend Overview 1](screenshots/overview.png/overview1.png.png)
 
-![CampusSpend Overview 2](screenshots/overview.png/overview2.png)
+![CampusSpend Overview 2](screenshots/overview.png/overview2.png.png)
 
 ### Transactions
 Add, view, and manage personal expenses in one place.
 
-![CampusSpend Transactions 1](screenshots/transactions.png/transactions1.png)
+![CampusSpend Transactions 1](screenshots/transactions.png/transactions1.png.png)
 
-![CampusSpend Transactions 2](screenshots/transactions.png/transactions2.png)
+![CampusSpend Transactions 2](screenshots/transactions.png/transactions2.png.png)
 
 ### Analytics
 Explore spending patterns through category breakdowns, monthly trends, and comparisons.
 
-![CampusSpend Analytics 1](screenshots/analytics.png/analytics1.png)
+![CampusSpend Analytics 1](screenshots/analytics.png/analytics1.png.png)
 
-![CampusSpend Analytics 2](screenshots/analytics.png/analytics2.png)
+![CampusSpend Analytics 2](screenshots/analytics.png/analytics2.png.png)
 
 ### Budgets
 Set monthly budgets and category-specific spending limits to keep expenses under control.
 
-![CampusSpend Budgets 1](screenshots/budgets.png/budgets1.png)
+![CampusSpend Budgets 1](screenshots/budgets.png/budgets1.png.png)
 
-![CampusSpend Budgets 2](screenshots/budgets.png/budgets2.png)
+![CampusSpend Budgets 2](screenshots/budgets.png/budgets2.png.png)
 
 ### Monthly Wrapped
 Review a monthly spending recap with key statistics and visual insights.
 
-![CampusSpend Monthly Wrapped 1](screenshots/monthly_wrapped.png/monthly-wrapped1.png)
+![CampusSpend Monthly Wrapped 1](screenshots/monthly_wrapped.png/monthly-wrapped1.png.png)
 
-![CampusSpend Monthly Wrapped 2](screenshots/monthly_wrapped.png/monthly-wrapped3.png)
+![CampusSpend Monthly Wrapped 2](screenshots/monthly_wrapped.png/monthly-wrapped3.png.png)
 
 ### Annual Wrapped
 Get a yearly overview of spending habits and trends.
 
-![CampusSpend Annual Wrapped 1](screenshots/annual_wrapped.png/annual-wrapped1.png)
+![CampusSpend Annual Wrapped 1](screenshots/annual_wrapped.png/annual-wrapped1.png.png)
 
-![CampusSpend Annual Wrapped 2](screenshots/annual_wrapped.png/annual-wrapped3.png)
+![CampusSpend Annual Wrapped 2](screenshots/annual_wrapped.png/annual-wrapped3.png.png)
 
 ## Tech Stack
 
